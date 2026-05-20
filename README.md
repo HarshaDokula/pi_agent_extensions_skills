@@ -43,6 +43,25 @@ Provides automated workflow orchestration with context compaction and unbiased r
 - Deterministic validation and automated fixes
 - Complete workflow automation from spec to verification
 
+### Undo
+
+Reverts file changes made by the **previous prompt only** — not the whole conversation, not the entire repo, just the last user prompt's modifications.
+
+**Key Features:**
+- One command: `/undo` — reverts the most recent user prompt's file changes
+- Git snapshot-based: uses `git stash create` to capture worktree state before each prompt (non-destructive, no worktree modification)
+- Repeated `/undo` pops progressively older prompts
+- Graceful non-git handling (notifies user, no-op)
+
+**How it works:**
+1. On `before_agent_start`, `git stash create` captures the current worktree as a commit object, `git stash store` persists it, and an in-memory map links entry IDs to stash refs.
+2. On `/undo`, the session branch is walked backwards to find the most recent user message with a snapshot, then `git checkout <ref> -- .` restores all tracked files to the captured state.
+3. The stash is dropped and the map entry is removed.
+
+**Files:** `extensions/undo/`, `tests/test_undo.sh`, `tests/test_undo_core.py`, `docs/undo/spec.md`
+
+**Known concerns** (documented in `extensions/undo/README.md`): unhandled rejections in `before_agent_start`, unchecked git command exit codes, stale stash accumulation, and gaps in test coverage (non-git path, checkout failure).
+
 ## Skills
 
 ### Build
