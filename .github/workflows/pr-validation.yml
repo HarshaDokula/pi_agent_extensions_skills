@@ -9,7 +9,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   branch-check:
@@ -187,3 +187,51 @@ jobs:
             echo "⚠️  Deletions should be intentional and explained in the PR description."
             echo "    If these are accidental, revert them."
           fi
+
+  auto-label:
+    name: Auto-Label PR
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          REPO="${{ github.repository }}"
+          LABELS_TO_ADD=()
+
+          # Label by target branch
+          if [[ "${BASE_REF}" == main ]]; then
+            LABELS_TO_ADD+=("infra")
+          elif [[ "${BASE_REF}" == set/* ]]; then
+            # Add the set branch itself as a label
+            LABELS_TO_ADD+=("${BASE_REF}")
+          fi
+
+          # Label by changed content
+          git fetch origin "${BASE_REF}" 2>/dev/null || true
+          CHANGED=$(git diff --name-only "origin/${BASE_REF}...HEAD" 2>/dev/null || true)
+
+          if echo "$CHANGED" | grep -q "^skills/"; then
+            LABELS_TO_ADD+=("skill")
+          fi
+          if echo "$CHANGED" | grep -q "^extensions/"; then
+            LABELS_TO_ADD+=("extension")
+          fi
+
+          # Apply labels via gh CLI
+          if [[ ${#LABELS_TO_ADD[@]} -gt 0 ]]; then
+            echo "Applying labels: ${LABELS_TO_ADD[*]}"
+            for label in "${LABELS_TO_ADD[@]}"; do
+              # Create label if it doesn't exist (for new set/* labels)
+              gh label create "$label" --repo "$REPO" --force 2>/dev/null || true
+              gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$label"
+            done
+          fi
+          echo "✅ Labels applied"

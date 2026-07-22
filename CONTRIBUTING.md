@@ -38,6 +38,10 @@ git checkout -b set/data-engineering
 git push -u origin set/data-engineering
 ```
 
+> **⚠️ Always create new `set/*` branches from the latest `main`.**
+> `main` carries the CI workflows (`.github/workflows/`) that validate every PR.
+> If you branch from an old commit or another source, validation won't run on your set.
+
 ### 2. Make Your Changes
 
 #### Adding a Skill
@@ -109,6 +113,20 @@ The following protections are enforced:
 - **`main`**: only infrastructure PRs accepted; direct pushes blocked.
 - **`set/*`**: only `feature/*` PRs accepted; at least one approving review required; CI must pass.
 - **`feature/*`**: no direct PR to another `feature/*`.
+
+## Labels
+
+When opening issues or PRs, use the labels below to help route your contribution:
+
+| Label | When to use |
+|-------|-------------|
+| `skill` | Adding or modifying a skill |
+| `extension` | Adding or modifying an extension |
+| `infra` | CI, docs, or meta changes (targeting `main`) |
+| `bug` | Something is broken |
+| `set/<profile>` | Tag the relevant set branch (e.g. `set/python-dev`) |
+
+The CI workflow automatically applies labels to PRs based on the target branch and changed files.
 
 ## Conventions
 
